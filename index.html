@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Colton</title>
+  <meta name="description" content="Personal website of Colton.">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="/">Colton</a>
+    <nav>
+      <a href="#about">About</a>
+      <a href="#projects">Projects</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Hi, I'm Colton.</h1>
+      <p>A short one-line intro about who you are and what you do.</p>
+    </section>
+
+    <section id="about">
+      <h2>About</h2>
+      <p>Write a few sentences about yourself here.</p>
+    </section>
+
+    <section id="projects">
+      <h2>Projects</h2>
+      <ul class="projects">
+        <li>
+          <h3>Project One</h3>
+          <p>A brief description of the project.</p>
+        </li>
+        <li>
+          <h3>Project Two</h3>
+          <p>A brief description of the project.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section id="contact">
+      <h2>Contact</h2>
+      <p>Reach me at <a href="mailto:you@example.com">you@example.com</a>.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; <span id="year"></span> Colton</p>
+  </footer>
+
+  <script>document.getElementById("year").textContent = new Date().getFullYear();</script>
+</body>
+</html>
