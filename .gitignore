@@ -4,3 +4,7 @@ desktop.ini
 .vscode/
 .idea/
 node_modules/
+dist/
+.astro/
+.env
+npm-debug.log*

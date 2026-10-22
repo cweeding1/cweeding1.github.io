@@ -1,25 +1,29 @@
 # Personal Website
 
-Static personal website hosted on GitHub Pages.
+Personal website built with [Astro](https://astro.build) and hosted on GitHub Pages
+at https://cweeding1.github.io.
 
 ## Structure
 
-- `index.html` — main page
-- `assets/css/style.css` — styles
-- `.nojekyll` — tells GitHub Pages to serve files as-is (no Jekyll build)
+- `src/pages/index.astro` — home page
+- `src/layouts/Layout.astro` — shared page shell (head, header, footer)
+- `src/components/ProjectCard.astro` — one project entry
+- `src/data/projects.ts` — project list; add a project here
+- `src/styles/global.css` — site styles
+- `public/` — static files copied as-is (favicon, images, `CNAME`)
 
-## Local preview
+## Development
 
-Open `index.html` in a browser, or run a local server:
+Requires Node.js 22.23.4 or newer.
 
 ```sh
-python -m http.server 8000
+npm install
+npm run dev      # local dev server at http://localhost:4321
+npm run build    # production build into dist/
+npm run preview  # serve the production build
 ```
-
-then visit http://localhost:8000.
 
 ## Deploy
 
-Push to the `main` branch, then in the GitHub repo go to
-**Settings → Pages → Build and deployment**, choose **Deploy from a branch**,
-and select `main` / `(root)`.
+Pushing to `main` runs `.github/workflows/deploy.yml`, which builds the site and
+deploys it to GitHub Pages.

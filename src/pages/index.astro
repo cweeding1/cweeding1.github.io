@@ -1,0 +1,29 @@
+---
+import Layout from "../layouts/Layout.astro";
+import ProjectCard from "../components/ProjectCard.astro";
+import { projects } from "../data/projects";
+---
+
+<Layout title="Colton Weeding">
+  <section class="hero">
+    <h1>Hi, I'm Colton.</h1>
+    <p>A short one-line intro about who you are and what you do.</p>
+  </section>
+
+  <section id="about">
+    <h2>About</h2>
+    <p>Write a few sentences about yourself here.</p>
+  </section>
+
+  <section id="projects">
+    <h2>Projects</h2>
+    <ul class="projects">
+      {projects.map((project) => <ProjectCard {...project} />)}
+    </ul>
+  </section>
+
+  <section id="contact">
+    <h2>Contact</h2>
+    <p>Reach me at <a href="mailto:you@example.com">you@example.com</a>.</p>
+  </section>
+</Layout>

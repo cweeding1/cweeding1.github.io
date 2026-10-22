@@ -1,0 +1,13 @@
+---
+import type { Project } from "../data/projects";
+
+type Props = Project;
+
+const { title, url, description, tags } = Astro.props;
+---
+
+<li>
+  <h3>{url ? <a href={url}>{title}</a> : title}</h3>
+  <p>{description}</p>
+  <p class="tags">{tags.join(" · ")}</p>
+</li>
