@@ -1,4 +1,4 @@
-import { COVERAGE, TYPE_MOVES, type PokeType } from "./types";
+import { COVERAGE, TYPE_MOVES, TYPES, type PokeType } from "./types";
 
 const API = "https://pokeapi.co/api/v2";
 const LEVEL = 50;
@@ -76,14 +76,26 @@ function hpAt50(base: number): number {
   return Math.floor(((2 * base + 31) * LEVEL) / 100) + LEVEL + 10;
 }
 
+// Every Pokémon gets exactly four moves: one per own type, coverage moves to
+// fill the gaps, and a weak Normal move as the last slot when there's room.
 function buildMoves(id: number, types: PokeType[]): Move[] {
   const moves: Move[] = types.map((type) => ({ name: TYPE_MOVES[type], type, power: 90 }));
-  // A deterministic coverage move per species so the same Pokémon always has the same set.
-  const options = COVERAGE[types[0]].filter((t) => !types.includes(t));
-  const cover = options[id % options.length];
-  if (cover) moves.push({ name: TYPE_MOVES[cover], type: cover, power: 80 });
-  if (!types.includes("normal")) moves.push({ name: "Quick Strike", type: "normal", power: 60 });
-  return moves.slice(0, 4);
+  const used = new Set<PokeType>(types);
+  const wantsQuickStrike = !used.has("normal");
+  const coverageSlots = 4 - moves.length - (wantsQuickStrike ? 1 : 0);
+  used.add("normal");
+
+  // Rotate by species id so the same Pokémon always has the same set,
+  // while two Pokémon of the same type can still differ.
+  const pool = [...new Set([...types.flatMap((t) => COVERAGE[t]), ...TYPES])].filter((t) => !used.has(t));
+  const start = id % Math.min(pool.length, 3);
+  const ordered = [...pool.slice(start), ...pool.slice(0, start)];
+  for (const cover of ordered.slice(0, coverageSlots)) {
+    moves.push({ name: TYPE_MOVES[cover], type: cover, power: 80 });
+  }
+
+  if (wantsQuickStrike) moves.push({ name: "Quick Strike", type: "normal", power: 60 });
+  return moves;
 }
 
 export function toBattler(p: ApiPokemon): Battler {
