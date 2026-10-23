@@ -1,4 +1,5 @@
 ---
+import PokedexDialog from "./PokedexDialog.astro";
 import { site } from "../data/site";
 ---
 
@@ -8,15 +9,8 @@ import { site } from "../data/site";
     <div class="builder-grid">
       <div>
         <p class="lead">Build a team of 6 and challenge my team. Every Pokémon fights at level 50.</p>
-        <form class="search" autocomplete="off">
-          <label for="poke-search">Add a Pokémon</label>
-          <div class="search-row">
-            <input id="poke-search" list="poke-names" placeholder="pikachu" />
-            <datalist id="poke-names"></datalist>
-            <button class="btn" type="submit">Add</button>
-          </div>
-        </form>
         <div class="builder-actions">
+          <button class="btn" type="button" data-action="open-dex">Open Pokédex</button>
           <button class="btn yellow" type="button" data-action="random">Random team</button>
           <button class="btn ghost" type="button" data-action="clear">Clear</button>
         </div>
@@ -31,6 +25,7 @@ import { site } from "../data/site";
       </div>
     </div>
     <button class="btn magenta start" type="button" data-action="start" disabled>Battle! &#9654;</button>
+    <PokedexDialog />
   </div>
 
   <!-- Battle -->
@@ -84,9 +79,6 @@ import { site } from "../data/site";
     grid-template-columns: 1fr 1.3fr;
     gap: 32px;
   }
-
-  .search-row { display: flex; gap: 10px; }
-  .search-row input { flex: 1; min-width: 0; }
 
   .builder-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
 
@@ -282,7 +274,8 @@ import { site } from "../data/site";
 
 <script>
   import { Battle, damageFor, type BattleEvent, type Side } from "../scripts/pokemon/battle";
-  import { displayName, fetchAllNames, fetchPokemon, MAX_DEX, toBattler, type Battler } from "../scripts/pokemon/api";
+  import { displayName, fetchPokemon, MAX_DEX, toBattler, type Battler } from "../scripts/pokemon/api";
+  import { setupPokedex } from "../scripts/pokemon/pokedex";
 
   const root = document.querySelector<HTMLElement>(".arena")!;
   const $ = <T extends Element = HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
@@ -353,21 +346,32 @@ import { site } from "../data/site";
     renderSlots($(".player-slots"), team, true);
     $(".count").textContent = `${team.length}/6`;
     $<HTMLButtonElement>("[data-action=start]").disabled = team.length !== 6 || foeTeam.length !== 6;
+    dex.refresh();
   }
 
-  async function addPokemon(query: string) {
-    const q = query.trim().toLowerCase();
-    if (!q) return;
-    if (team.length >= 6) return setMsg("Your team is full!");
-    setMsg("Loading...");
+  async function addPokemon(name: string): Promise<boolean> {
+    if (team.length >= 6 || team.some((m) => m.name === name)) return false;
     try {
-      team.push(toBattler(await fetchPokemon(q)));
+      const mon = toBattler(await fetchPokemon(name));
+      // The team may have changed while the request was in flight.
+      if (team.length >= 6 || team.some((m) => m.name === mon.name)) return false;
+      team.push(mon);
       setMsg("");
       renderTeam();
+      return true;
     } catch {
-      setMsg(`Couldn't find "${query}".`);
+      return false;
     }
   }
+
+  const dex = setupPokedex($<HTMLDialogElement>("dialog.dex"), {
+    getParty: () => team,
+    add: addPokemon,
+    remove: (i) => {
+      team.splice(i, 1);
+      renderTeam();
+    },
+  });
 
   async function randomTeam() {
     setMsg("Rolling...");
@@ -391,20 +395,6 @@ import { site } from "../data/site";
       setMsg("Couldn't reach PokéAPI. Refresh to try again.");
     }
   }
-
-  $("form.search").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const input = $<HTMLInputElement>("#poke-search");
-    addPokemon(input.value).then(() => (input.value = ""));
-  });
-
-  fetchAllNames()
-    .then((names) => {
-      $("#poke-names").replaceChildren(
-        ...names.map((n) => Object.assign(document.createElement("option"), { value: n })),
-      );
-    })
-    .catch(() => {});
 
   /* ---------- Battle ---------- */
 
@@ -571,6 +561,7 @@ import { site } from "../data/site";
   root.addEventListener("click", (e) => {
     const action = (e.target as HTMLElement).closest<HTMLElement>("[data-action]")?.dataset.action;
     if (!action) return;
+    if (action === "open-dex") dex.open();
     if (action === "random") randomTeam();
     if (action === "clear") {
       team = [];

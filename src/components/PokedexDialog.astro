@@ -1,0 +1,244 @@
+---
+import { TYPES } from "../scripts/pokemon/types";
+
+const GENS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
+---
+
+<dialog class="dex" aria-labelledby="dex-title">
+  <div class="dex-frame">
+    <header class="dex-head">
+      <h2 id="dex-title" class="glow-cyan">Pokédex</h2>
+      <button class="dex-close" type="button" data-dex="close" aria-label="Close Pokédex">X</button>
+    </header>
+
+    <div class="dex-party">
+      <span class="dex-label">Party <span class="dex-count">0/6</span></span>
+      <ol class="dex-slots"></ol>
+      <button class="btn magenta" type="button" data-dex="close">Done</button>
+    </div>
+
+    <div class="dex-filters">
+      <div class="dex-search">
+        <label for="dex-name">Search name</label>
+        <input id="dex-name" type="search" placeholder="Search Pokémon" autocomplete="off" />
+      </div>
+      <div class="dex-gen">
+        <label for="dex-gen">Generation</label>
+        <select id="dex-gen">
+          <option value="">All</option>
+          {GENS.map((g, i) => <option value={i + 1}>Gen {g}</option>)}
+        </select>
+      </div>
+      <fieldset class="dex-types">
+        <legend>Type</legend>
+        <button type="button" class="type-chip all" data-type="" aria-pressed="true">All</button>
+        {
+          TYPES.map((t) => (
+            <button type="button" class={`type-chip type type-${t}`} data-type={t} aria-pressed="false">
+              {t}
+            </button>
+          ))
+        }
+      </fieldset>
+    </div>
+
+    <p class="dex-status" role="status" aria-live="polite">Loading Pokédex...</p>
+    <div class="dex-grid"></div>
+  </div>
+</dialog>
+
+<style>
+  .dex {
+    width: min(1100px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    padding: 0;
+    color: var(--text);
+    background: var(--panel);
+    border: 3px solid var(--cyan);
+    box-shadow: 0 0 0 3px #000, 0 0 40px rgba(0, 240, 255, 0.35);
+    overflow: hidden;
+  }
+
+  .dex::backdrop {
+    background: rgba(4, 4, 16, 0.8);
+    backdrop-filter: blur(2px);
+  }
+
+  .dex[open] { display: flex; }
+
+  .dex-frame {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: calc(100vh - 38px);
+  }
+
+  .dex-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #000;
+    border-bottom: 3px solid var(--border);
+  }
+
+  .dex-head h2 { margin: 0; font-size: 14px; }
+
+  .dex-close {
+    width: 32px;
+    height: 32px;
+    font-family: var(--pixel);
+    font-size: 11px;
+    color: #000;
+    background: var(--red);
+    border: 2px solid #000;
+    cursor: pointer;
+  }
+
+  .dex-party {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-bottom: 3px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .dex-label { font-family: var(--pixel); font-size: 10px; color: var(--muted); }
+  .dex-count { color: var(--yellow); }
+
+  .dex-slots {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex: 1;
+  }
+
+  .dex-slots :global(li) {
+    width: 52px;
+    height: 52px;
+    background: #000;
+    border: 2px dashed var(--border);
+  }
+
+  .dex-slots :global(li.filled) { border: 2px solid var(--cyan); }
+
+  .dex-slots :global(button) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .dex-slots :global(button:hover) { background: rgba(255, 59, 92, 0.3); }
+  .dex-slots :global(img) { width: 100%; height: 100%; image-rendering: pixelated; }
+
+  .dex-filters {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    gap: 12px 16px;
+    padding: 14px 16px;
+    border-bottom: 3px solid var(--border);
+  }
+
+  .dex-filters select { cursor: pointer; }
+
+  .dex-types {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .dex-types legend {
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .type-chip {
+    border: 2px solid #000;
+    cursor: pointer;
+    opacity: 0.55;
+  }
+
+  .type-chip.all {
+    font-family: var(--pixel);
+    font-size: 8px;
+    padding: 4px 8px;
+    color: #000;
+    background: var(--text);
+  }
+
+  .type-chip[aria-pressed="true"] { opacity: 1; outline: 2px solid var(--yellow); outline-offset: 1px; }
+  .type-chip:hover { opacity: 1; }
+
+  .dex-status {
+    margin: 0;
+    padding: 8px 16px 0;
+    font-family: var(--pixel);
+    font-size: 9px;
+    color: var(--muted);
+  }
+
+  .dex-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    gap: 10px;
+    padding: 12px 16px 18px;
+    overflow-y: auto;
+    min-height: 200px;
+  }
+
+  .dex-grid :global(button) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 6px 10px;
+    color: var(--text);
+    background: #000;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 18px;
+  }
+
+  .dex-grid :global(button:hover:not(:disabled)) { border-color: var(--yellow); transform: translateY(-2px); }
+  .dex-grid :global(button:disabled) { cursor: not-allowed; opacity: 0.4; }
+  .dex-grid :global(button.picked) { border-color: var(--green); opacity: 1; }
+  .dex-grid :global(button.picked::after) {
+    content: "In party";
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-family: var(--pixel);
+    font-size: 6px;
+    color: #000;
+    background: var(--green);
+    padding: 2px 3px;
+  }
+
+  .dex-grid :global(img) { width: 80px; height: 80px; image-rendering: pixelated; }
+  .dex-grid :global(.dex-num) { font-family: var(--pixel); font-size: 8px; color: var(--muted); }
+  .dex-grid :global(.dex-name) { text-align: center; line-height: 1; }
+  .dex-grid :global(.dex-tys) { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
+  .dex-grid :global(.type) { font-size: 6px; padding: 3px 4px; }
+
+  @media (max-width: 640px) {
+    .dex-filters { grid-template-columns: 1fr; }
+    .dex-slots :global(li) { width: 40px; height: 40px; }
+    .dex-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+    .dex-grid :global(img) { width: 64px; height: 64px; }
+  }
+</style>

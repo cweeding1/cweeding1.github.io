@@ -56,16 +56,6 @@ export function fetchPokemon(nameOrId: string | number): Promise<ApiPokemon> {
   return p;
 }
 
-let namesPromise: Promise<string[]> | undefined;
-
-// Default forms only; alternate forms (megas, regionals) have ids above 10000.
-export function fetchAllNames(): Promise<string[]> {
-  namesPromise ??= getJson<{ results: { name: string }[] }>(`${API}/pokemon?limit=1025`).then((d) =>
-    d.results.map((r) => r.name),
-  );
-  return namesPromise;
-}
-
 export const MAX_DEX = 1025;
 
 function statAt50(base: number): number {
