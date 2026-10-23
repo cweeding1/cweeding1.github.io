@@ -1,13 +1,14 @@
-import { COVERAGE, TYPE_MOVES, TYPES, type PokeType } from "./types";
+import { pickAbility } from "./abilities";
+import { buildMoves, type Move, type StatKey } from "./moves";
+import type { PokeType } from "./types";
 
 const API = "https://pokeapi.co/api/v2";
-const LEVEL = 50;
+export const LEVEL = 50;
 
-export interface Move {
-  name: string;
-  type: PokeType;
-  power: number;
-}
+// Every stat is trained to its ceiling: perfect IVs and maximum EVs in each
+// one (deliberately ignoring the games' 510 total EV cap).
+const IV = 31;
+const EV = 252;
 
 export interface Battler {
   id: number;
@@ -17,11 +18,9 @@ export interface Battler {
   back: string;
   maxHp: number;
   hp: number;
-  attack: number;
-  defense: number;
-  spAttack: number;
-  spDefense: number;
-  speed: number;
+  stats: Record<StatKey, number>;
+  ability: string;
+  abilityDesc: string;
   moves: Move[];
 }
 
@@ -30,6 +29,7 @@ interface ApiPokemon {
   name: string;
   types: { slot: number; type: { name: PokeType } }[];
   stats: { base_stat: number; stat: { name: string } }[];
+  abilities: { ability: { name: string }; is_hidden: boolean }[];
   sprites: {
     front_default: string | null;
     back_default: string | null;
@@ -58,40 +58,26 @@ export function fetchPokemon(nameOrId: string | number): Promise<ApiPokemon> {
 
 export const MAX_DEX = 1025;
 
-function statAt50(base: number): number {
-  return Math.floor(((2 * base + 31) * LEVEL) / 100) + 5;
-}
-
-function hpAt50(base: number): number {
-  return Math.floor(((2 * base + 31) * LEVEL) / 100) + LEVEL + 10;
-}
-
-// Every Pokémon gets exactly four moves: one per own type, coverage moves to
-// fill the gaps, and a weak Normal move as the last slot when there's room.
-function buildMoves(id: number, types: PokeType[]): Move[] {
-  const moves: Move[] = types.map((type) => ({ name: TYPE_MOVES[type], type, power: 90 }));
-  const used = new Set<PokeType>(types);
-  const wantsQuickStrike = !used.has("normal");
-  const coverageSlots = 4 - moves.length - (wantsQuickStrike ? 1 : 0);
-  used.add("normal");
-
-  // Rotate by species id so the same Pokémon always has the same set,
-  // while two Pokémon of the same type can still differ.
-  const pool = [...new Set([...types.flatMap((t) => COVERAGE[t]), ...TYPES])].filter((t) => !used.has(t));
-  const start = id % Math.min(pool.length, 3);
-  const ordered = [...pool.slice(start), ...pool.slice(0, start)];
-  for (const cover of ordered.slice(0, coverageSlots)) {
-    moves.push({ name: TYPE_MOVES[cover], type: cover, power: 80 });
-  }
-
-  if (wantsQuickStrike) moves.push({ name: "Quick Strike", type: "normal", power: 60 });
-  return moves;
-}
+const trained = (base: number) => Math.floor(((2 * base + IV + Math.floor(EV / 4)) * LEVEL) / 100);
+const statAt50 = (base: number) => trained(base) + 5;
+// Shedinja always has exactly 1 HP.
+const hpAt50 = (base: number) => (base === 1 ? 1 : trained(base) + LEVEL + 10);
 
 export function toBattler(p: ApiPokemon): Battler {
   const base = Object.fromEntries(p.stats.map((s) => [s.stat.name, s.base_stat]));
   const types = [...p.types].sort((a, b) => a.slot - b.slot).map((t) => t.type.name);
   const front = p.sprites.front_default ?? p.sprites.other?.["official-artwork"]?.front_default ?? "";
+  const ability = pickAbility(p.abilities.map((a) => ({ name: a.ability.name, hidden: a.is_hidden })));
+  const stats = {
+    atk: statAt50(base.attack),
+    def: statAt50(base.defense),
+    spa: statAt50(base["special-attack"]),
+    spd: statAt50(base["special-defense"]),
+    spe: statAt50(base.speed),
+  };
+  // Attack with whichever side is stronger, counting abilities that double Attack.
+  const atkPower = stats.atk * (["huge-power", "pure-power"].includes(ability.name) ? 2 : 1);
+  const category = atkPower >= stats.spa ? "physical" : "special";
   const maxHp = hpAt50(base.hp);
   return {
     id: p.id,
@@ -101,12 +87,10 @@ export function toBattler(p: ApiPokemon): Battler {
     back: p.sprites.back_default ?? "",
     maxHp,
     hp: maxHp,
-    attack: statAt50(base.attack),
-    defense: statAt50(base.defense),
-    spAttack: statAt50(base["special-attack"]),
-    spDefense: statAt50(base["special-defense"]),
-    speed: statAt50(base.speed),
-    moves: buildMoves(p.id, types),
+    stats,
+    ability: ability.name,
+    abilityDesc: ability.desc,
+    moves: buildMoves(p.id, types, category, ability.name),
   };
 }
 

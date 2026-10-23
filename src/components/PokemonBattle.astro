@@ -8,7 +8,10 @@ import { site } from "../data/site";
   <div class="screen builder" data-screen="builder">
     <div class="builder-grid">
       <div>
-        <p class="lead">Build a team of 6 and challenge my team. Every Pokémon fights at level 50.</p>
+        <p class="lead">
+          Build a team of 6 and challenge my team. Every Pokémon fights at level 50 with maxed-out stats and its
+          best ability.
+        </p>
         <div class="builder-actions">
           <button class="btn" type="button" data-action="open-dex">Open Pokédex</button>
           <button class="btn yellow" type="button" data-action="random">Random team</button>
@@ -31,15 +34,22 @@ import { site } from "../data/site";
   <!-- Battle -->
   <div class="screen battle" data-screen="battle" hidden>
     <div class="stage">
+      <div class="field" aria-live="polite"></div>
       <div class="info foe-info">
-        <div class="info-top"><span class="info-name"></span><span class="info-lv">Lv50</span></div>
+        <div class="info-top">
+          <span class="info-name"></span><span class="info-status"></span><span class="info-lv">Lv50</span>
+        </div>
+        <div class="info-ability"></div>
         <div class="hpbar"><span></span></div>
         <div class="balls"></div>
       </div>
       <img class="sprite foe-sprite" alt="" width="192" height="192" />
       <img class="sprite player-sprite" alt="" width="192" height="192" />
       <div class="info player-info">
-        <div class="info-top"><span class="info-name"></span><span class="info-lv">Lv50</span></div>
+        <div class="info-top">
+          <span class="info-name"></span><span class="info-status"></span><span class="info-lv">Lv50</span>
+        </div>
+        <div class="info-ability"></div>
         <div class="hpbar"><span></span></div>
         <div class="hp-num"></div>
         <div class="balls"></div>
@@ -179,9 +189,29 @@ import { site } from "../data/site";
   .foe-info { left: 16px; top: 16px; }
   .player-info { right: 16px; bottom: 16px; }
 
-  .info-top { display: flex; justify-content: space-between; gap: 8px; font-family: var(--pixel); font-size: 10px; }
+  .info-top { display: flex; align-items: center; gap: 8px; font-family: var(--pixel); font-size: 10px; }
   .info-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .info-lv { color: var(--muted); }
+  .info-lv { color: var(--muted); margin-left: auto; }
+  .info-status:not(:empty) { font-size: 8px; padding: 2px 4px; color: #000; background: var(--yellow); }
+  .info-status.brn { background: #ff7a3c; }
+  .info-status.psn { background: #c070ff; }
+  .info-status.par { background: var(--yellow); }
+  .info-status.slp { background: #9a9ac8; }
+  .info-status.frz { background: #7fe3ff; }
+  .info-ability { margin-top: 4px; font-size: 17px; color: var(--cyan); cursor: help; }
+
+  .field:not(:empty) {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    z-index: 1;
+    font-family: var(--pixel);
+    font-size: 8px;
+    padding: 4px 6px;
+    color: #000;
+    background: var(--yellow);
+  }
+
 
   .hpbar {
     margin-top: 8px;
@@ -253,6 +283,10 @@ import { site } from "../data/site";
   .moves :global(button:hover:not(:disabled)), .party :global(button:hover:not(:disabled)) { border-color: var(--yellow); }
   .moves :global(button:disabled), .party :global(button:disabled) { opacity: 0.4; cursor: not-allowed; }
   .moves :global(.eff) { font-family: var(--mono); font-size: 16px; color: var(--muted); }
+  .moves :global(.eff.good) { color: var(--green); }
+  .moves :global(.eff.bad) { color: var(--red); }
+  .moves :global(.meta) { display: flex; gap: 6px; align-items: center; }
+  .moves :global(.pow) { font-family: var(--mono); font-size: 16px; color: var(--text); }
   .party :global(button) { flex-direction: row; align-items: center; }
   .party :global(img) { width: 40px; height: 40px; image-rendering: pixelated; }
 
@@ -273,7 +307,7 @@ import { site } from "../data/site";
 </style>
 
 <script>
-  import { Battle, damageFor, type BattleEvent, type Side } from "../scripts/pokemon/battle";
+  import { Battle, type BattleEvent, type Mon, type Side } from "../scripts/pokemon/battle";
   import { displayName, fetchPokemon, MAX_DEX, toBattler, type Battler } from "../scripts/pokemon/api";
   import { setupPokedex } from "../scripts/pokemon/pokedex";
 
@@ -316,7 +350,7 @@ import { site } from "../data/site";
         const mon = mons[i];
         if (!mon) return li;
         li.className = "filled";
-        li.title = `${displayName(mon.name)} (${mon.types.join("/")})`;
+        li.title = `${displayName(mon.name)} (${mon.types.join("/")})\nAbility: ${displayName(mon.ability)}: ${mon.abilityDesc}`;
         const img = document.createElement("img");
         img.src = mon.front;
         img.alt = displayName(mon.name);
@@ -398,21 +432,46 @@ import { site } from "../data/site";
 
   /* ---------- Battle ---------- */
 
-  function hpClass(mon: Battler) {
-    const pct = mon.hp / mon.maxHp;
-    return pct > 0.5 ? "" : pct > 0.2 ? "mid" : "low";
-  }
+  // What the screen currently shows for each Pokémon. Events carry HP and
+  // status snapshots, so the display can lag behind the engine's final state
+  // while a turn plays out.
+  type Shown = { hp: number; status: Mon["status"] };
+  const shown: Record<Side, Shown[]> = { player: [], foe: [] };
+  const onScreen: Record<Side, number> = { player: 0, foe: 0 };
 
-  function setHp(side: Side, mon: Battler) {
+  const FIELD_LABELS: Record<string, string> = {
+    rain: "Rain",
+    sun: "Harsh sun",
+    sand: "Sandstorm",
+    snow: "Snow",
+    electric: "Electric Terrain",
+    grassy: "Grassy Terrain",
+    psychic: "Psychic Terrain",
+    misty: "Misty Terrain",
+  };
+
+  const teamOf = (side: Side) => (side === "player" ? battle!.player : battle!.foe);
+
+  function setHp(side: Side) {
+    const mon = teamOf(side)[onScreen[side]];
+    const { hp } = shown[side][onScreen[side]];
+    const pct = hp / mon.maxHp;
     const bar = $(`.${side}-info .hpbar span`);
-    bar.style.width = `${(mon.hp / mon.maxHp) * 100}%`;
-    bar.className = hpClass(mon);
-    if (side === "player") $(".hp-num").textContent = `${mon.hp}/${mon.maxHp}`;
+    bar.style.width = `${pct * 100}%`;
+    bar.className = pct > 0.5 ? "" : pct > 0.2 ? "mid" : "low";
+    if (side === "player") $(".hp-num").textContent = `${hp}/${mon.maxHp}`;
   }
 
-  function renderBalls(side: Side, mons: Battler[]) {
+  function setStatus(side: Side) {
+    const { status } = shown[side][onScreen[side]];
+    const el = $(`.${side}-info .info-status`);
+    el.textContent = status ? status.toUpperCase() : "";
+    el.className = `info-status ${status ?? ""}`;
+  }
+
+  function renderBalls(side: Side) {
     $(`.${side}-info .balls`).replaceChildren(
-      ...mons.map((m) => {
+      ...shown[side].map((m) => {
         const i = document.createElement("i");
         if (m.hp === 0) i.className = "out";
         return i;
@@ -421,29 +480,32 @@ import { site } from "../data/site";
   }
 
   function renderSide(side: Side) {
-    if (!battle) return;
-    const mon = side === "player" ? battle.playerMon : battle.foeMon;
+    const mon = teamOf(side)[onScreen[side]];
     const sprite = $<HTMLImageElement>(`.${side}-sprite`);
     const useBack = side === "player" && mon.back;
     sprite.src = side === "player" ? mon.back || mon.front : mon.front;
     sprite.alt = displayName(mon.name);
     sprite.className = `sprite ${side}-sprite${side === "player" && !useBack ? " no-back" : ""}`;
     $(`.${side}-info .info-name`).textContent = displayName(mon.name);
-    setHp(side, mon);
-    renderBalls(side, side === "player" ? battle.player : battle.foe);
+    const ability = $(`.${side}-info .info-ability`);
+    ability.textContent = displayName(mon.baseAbility);
+    ability.title = mon.abilityDesc;
+    setHp(side);
+    setStatus(side);
+    renderBalls(side);
   }
 
-  function effLabel(mult: number) {
-    if (mult === 0) return "No effect";
-    if (mult > 1) return "Super effective";
-    if (mult < 1) return "Not very effective";
-    return "Effective";
+  function effLabel(mult: number): [string, string] {
+    if (mult === 0) return ["No effect", "bad"];
+    if (mult > 1) return ["Super effective", "good"];
+    if (mult < 1) return ["Not very effective", "bad"];
+    return ["Effective", ""];
   }
 
   function renderCommands() {
     if (!battle) return;
     const b = battle;
-    const fainted = b.playerMon.hp === 0;
+    const mustSwitch = b.playerMustSwitch;
     const moves = $(".moves");
     const party = $(".party");
 
@@ -451,9 +513,19 @@ import { site } from "../data/site";
       ...b.playerMon.moves.map((m, i) => {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.disabled = busy || fainted;
-        const eff = damageFor(b.playerMon, b.foeMon, m, false).eff;
-        btn.innerHTML = `<span>${m.name}</span><span class="type type-${m.type}">${m.type}</span><span class="eff">${effLabel(eff)}</span>`;
+        btn.disabled = busy || mustSwitch;
+        const [label, cls] = effLabel(b.estimate("player", m).eff);
+        const kind = m.category === "physical" ? "Phys" : "Spec";
+        btn.title = [
+          `${m.name}: ${m.power} power, ${m.accuracy ? `${m.accuracy}% accuracy` : "never misses"}.`,
+          m.priority ? "Moves first." : "",
+          m.contact ? "Makes contact." : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        btn.innerHTML = `<span>${m.name}</span>
+          <span class="meta"><span class="type type-${m.type}">${m.type}</span><span class="pow">${kind} ${m.power}</span></span>
+          <span class="eff ${cls}">${label}</span>`;
         btn.addEventListener("click", () => play(b.turn({ kind: "move", index: i })));
         return btn;
       }),
@@ -464,23 +536,27 @@ import { site } from "../data/site";
         const btn = document.createElement("button");
         btn.type = "button";
         btn.disabled = busy || m.hp === 0 || i === b.playerActive;
-        btn.innerHTML = `<img src="${m.front}" alt=""><span>${displayName(m.name)}<br>${m.hp}/${m.maxHp}</span>`;
+        btn.title = `Ability: ${displayName(m.baseAbility)}: ${m.abilityDesc}`;
+        const status = m.status ? ` ${m.status.toUpperCase()}` : "";
+        btn.innerHTML = `<img src="${m.front}" alt=""><span>${displayName(m.name)}<br>${m.hp}/${m.maxHp}${status}</span>`;
         btn.addEventListener("click", () => {
           party.hidden = true;
           moves.hidden = false;
-          play(fainted ? b.replace(i) : b.turn({ kind: "switch", to: i }));
+          play(mustSwitch ? b.replace(i) : b.turn({ kind: "switch", to: i }));
         });
         return btn;
       }),
     );
 
-    // A fainted Pokémon must be replaced before anything else.
-    party.hidden = !fainted && party.hidden;
-    if (fainted) {
+    // A fainted or retreating Pokémon must be replaced before anything else.
+    if (mustSwitch) {
       party.hidden = false;
       moves.hidden = true;
     }
-    $<HTMLButtonElement>("[data-action=toggle-party]").disabled = busy || fainted;
+    const toggle = $<HTMLButtonElement>("[data-action=toggle-party]");
+    const trapped = !b.canPlayerSwitch();
+    toggle.disabled = busy || mustSwitch || trapped;
+    toggle.title = trapped ? "The foe's ability is trapping your Pokémon!" : "";
     $<HTMLButtonElement>("[data-action=forfeit]").disabled = busy;
   }
 
@@ -499,31 +575,44 @@ import { site } from "../data/site";
         s.classList.add("lunge");
         await sleep(200);
         s.classList.remove("lunge");
-      } else if (ev.type === "damage") {
-        const mon = ev.side === "player" ? battle.playerMon : battle.foeMon;
-        $(`.${ev.side}-sprite`).classList.add("hit");
-        setHp(ev.side, mon);
-        if (ev.side === "foe") addScore(ev.damage * 10);
-        await sleep(700);
-        $(`.${ev.side}-sprite`).classList.remove("hit");
+      } else if (ev.type === "hp") {
+        shown[ev.side][ev.index].hp = ev.hp;
+        if (ev.index !== onScreen[ev.side]) continue;
+        const sprite = $(`.${ev.side}-sprite`);
+        if (ev.delta < 0) sprite.classList.add("hit");
+        setHp(ev.side);
+        if (ev.side === "foe" && ev.delta < 0) addScore(-ev.delta * 10);
+        await sleep(650);
+        sprite.classList.remove("hit");
+      } else if (ev.type === "status") {
+        shown[ev.side][ev.index].status = ev.status;
+        if (ev.index === onScreen[ev.side]) setStatus(ev.side);
       } else if (ev.type === "faint") {
+        shown[ev.side][ev.index].hp = 0;
+        shown[ev.side][ev.index].status = null;
         $(`.${ev.side}-sprite`).classList.add("fainted");
-        renderBalls(ev.side, ev.side === "player" ? battle.player : battle.foe);
+        setStatus(ev.side);
+        renderBalls(ev.side);
         if (ev.side === "foe") addScore(1000);
         await sleep(600);
       } else if (ev.type === "switch") {
+        onScreen[ev.side] = ev.index;
+        shown[ev.side][ev.index] = { hp: ev.hp, status: ev.status };
         renderSide(ev.side);
         await sleep(300);
+      } else if (ev.type === "field") {
+        const parts = [ev.weather, ev.terrain].flatMap((k) => (k ? [FIELD_LABELS[k]] : []));
+        $(".field").textContent = parts.join(" · ");
       }
     }
 
     busy = false;
     const winner = battle.winner;
     if (winner) return finish(winner);
-    log.textContent =
-      battle.playerMon.hp === 0
-        ? "Choose your next Pokémon!"
-        : `What will ${displayName(battle.playerMon.name)} do?`;
+    const name = displayName(battle.playerMon.name);
+    if (!battle.playerMustSwitch) log.textContent = `What will ${name} do?`;
+    else if (battle.playerMon.hp === 0) log.textContent = "Choose your next Pokémon!";
+    else log.textContent = `${name} wants to retreat! Choose who goes in.`;
     renderCommands();
   }
 
@@ -543,18 +632,18 @@ import { site } from "../data/site";
   }
 
   function startBattle() {
-    const heal = (m: Battler) => ({ ...m, hp: m.maxHp });
-    battle = new Battle(team.map(heal), foeTeam.map(heal));
+    battle = new Battle(team, foeTeam, foeHandle);
+    for (const side of ["player", "foe"] as Side[]) {
+      shown[side] = teamOf(side).map((m) => ({ hp: m.hp, status: null }));
+      onScreen[side] = 0;
+    }
     show("battle");
     $(".party").hidden = true;
     $(".moves").hidden = false;
+    $(".field").textContent = "";
     renderSide("player");
     renderSide("foe");
-    $(".log").textContent = `${foeHandle} wants to battle!`;
-    play([
-      { type: "text", text: `${foeHandle} sent out ${displayName(battle.foeMon.name)}!` },
-      { type: "text", text: `Go! ${displayName(battle.playerMon.name)}!` },
-    ]);
+    play(battle.start());
     root.scrollIntoView({ block: "start" });
   }
 
