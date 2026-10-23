@@ -11,7 +11,7 @@ export const projects: Project[] = [
   {
     title: "Northern Rodeo Association",
     kind: "Web App",
-    url: "https://nra-web-phi.vercel.app",
+    url: "https://montanacodeworks.com/",
     description:
       "A membership and event management platform for a regional rodeo association. Members buy their membership card, enter rodeos (alone or as a buddy group), and follow the draw, results and season standings. The office builds each rodeo program through a guided setup flow, takes entries, generates the draw from priority scores, records results, and exports draw and results sheets to Excel.",
     tags: ["Next.js", "React", "TypeScript", "PostgreSQL", "Drizzle", "Auth.js", "Stripe", "Tailwind CSS"],
