@@ -3,7 +3,12 @@ import PokedexDialog from "./PokedexDialog.astro";
 import { site } from "../data/site";
 ---
 
-<div class="arena" data-foe-team={JSON.stringify(site.pokemonTeam)} data-foe-name={site.handle}>
+<div
+  class="arena"
+  data-foe-team={JSON.stringify(site.pokemonTeam)}
+  data-foe-name={site.handle}
+  data-record-api={site.recordApi}
+>
   <!-- Team select -->
   <div class="screen builder" data-screen="builder">
     <div class="builder-grid">
@@ -23,7 +28,10 @@ import { site } from "../data/site";
       <div>
         <p class="label">Your team <span class="count">0/6</span></p>
         <ol class="slots player-slots"></ol>
-        <p class="label">Rival: <span class="glow-magenta">{site.handle}</span></p>
+        <p class="label">
+          Rival: <span class="glow-magenta">{site.handle}</span>
+          <span class="record" hidden></span>
+        </p>
         <ol class="slots foe-slots"></ol>
       </div>
     </div>
@@ -72,6 +80,7 @@ import { site } from "../data/site";
   <div class="screen result" data-screen="result" hidden>
     <p class="result-title"></p>
     <p class="result-sub"></p>
+    <p class="record result-record" hidden></p>
     <div class="builder-actions">
       <button class="btn yellow" type="button" data-action="rematch">Rematch</button>
       <button class="btn ghost" type="button" data-action="new-team">New team</button>
@@ -81,6 +90,8 @@ import { site } from "../data/site";
 
 <style>
   .arena { scroll-margin-top: 140px; }
+  .record { margin-left: 12px; color: var(--yellow); }
+  .result-record { margin: 0 0 24px; font-family: var(--pixel); font-size: 10px; }
   .lead { margin: 0 0 18px; }
   .label { font-family: var(--pixel); font-size: 10px; color: var(--muted); margin: 0 0 10px; }
   .msg { min-height: 1.3em; color: var(--yellow); margin: 12px 0 0; }
@@ -345,6 +356,36 @@ import { site } from "../data/site";
 
   function setMsg(text: string) {
     $(".msg").textContent = text;
+  }
+
+  /* ---------- Win/loss record ---------- */
+
+  const recordApi = root.dataset.recordApi ? `${root.dataset.recordApi.replace(/\/$/, "")}/record` : "";
+
+  function showRecord(r: { wins: number; losses: number }) {
+    const text = `Challengers ${r.wins}W - ${r.losses}L`;
+    root.querySelectorAll<HTMLElement>(".record").forEach((el) => {
+      el.textContent = text;
+      el.hidden = false;
+    });
+  }
+
+  async function recordRequest(init?: RequestInit) {
+    if (!recordApi) return;
+    try {
+      const res = await fetch(recordApi, init);
+      if (res.ok) showRecord(await res.json());
+    } catch {
+      // The record is a nice-to-have; battles work without it.
+    }
+  }
+
+  function reportResult(result: "win" | "loss") {
+    return recordRequest({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ result }),
+    });
   }
 
   function addScore(points: number) {
@@ -636,10 +677,12 @@ import { site } from "../data/site";
       title.className = "result-title glow-yellow";
       $(".result-sub").textContent = `You beat ${foeHandle}'s team. +5000 pts`;
       addScore(5000);
+      reportResult("win");
     } else {
       title.textContent = "Game over";
       title.className = "result-title glow-magenta";
       $(".result-sub").textContent = `${foeHandle}'s team wins this round. Continue?`;
+      reportResult("loss");
     }
     show("result");
   }
@@ -681,4 +724,5 @@ import { site } from "../data/site";
 
   renderTeam();
   loadFoes();
+  recordRequest();
 </script>

@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pokemon-record",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "vars": {
+    // Sites allowed to read and update the record from a browser.
+    "ALLOWED_ORIGINS": "https://coltonweeding.com,https://www.coltonweeding.com,http://localhost:4321"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pokemon-record",
+      "database_id": "local-only",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

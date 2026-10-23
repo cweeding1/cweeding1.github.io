@@ -27,3 +27,18 @@ npm run preview  # serve the production build
 
 Pushing to `main` runs `.github/workflows/deploy.yml`, which builds the site and
 deploys it to GitHub Pages.
+
+## Battle Arena record (Cloudflare Worker)
+
+`worker/` is a Cloudflare Worker with a D1 database that stores the Battle
+Arena's all-time win/loss record. Its URL goes in `recordApi` in
+`src/data/site.ts`.
+
+```sh
+cd worker
+npm install
+npx wrangler login
+npx wrangler d1 create pokemon-record   # put the printed database_id in wrangler.jsonc
+npm run migrate:remote
+npm run deploy
+```
