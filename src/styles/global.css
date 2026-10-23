@@ -19,6 +19,9 @@
 
 * { box-sizing: border-box; }
 
+/* Components set display on elements that are also toggled with [hidden]. */
+[hidden] { display: none !important; }
+
 html { scroll-behavior: smooth; }
 
 body {

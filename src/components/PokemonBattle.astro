@@ -80,6 +80,7 @@ import { site } from "../data/site";
 </div>
 
 <style>
+  .arena { scroll-margin-top: 140px; }
   .lead { margin: 0 0 18px; }
   .label { font-family: var(--pixel); font-size: 10px; color: var(--muted); margin: 0 0 10px; }
   .msg { min-height: 1.3em; color: var(--yellow); margin: 12px 0 0; }
@@ -261,7 +262,7 @@ import { site } from "../data/site";
 
   .moves, .party {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 
@@ -300,9 +301,21 @@ import { site } from "../data/site";
   @media (max-width: 800px) {
     .builder-grid, .console { grid-template-columns: 1fr; }
     .slots { grid-template-columns: repeat(3, 1fr); }
-    .stage { height: 280px; }
-    .sprite { width: 128px; height: 128px; }
-    .foe-sprite { top: 52px; right: 4%; }
+    .stage { height: 330px; }
+    .sprite { width: 120px; height: 120px; }
+    .foe-sprite { top: 88px; right: 3%; }
+    .player-sprite { left: 2%; bottom: 0; }
+    .info { width: 55%; padding: 6px 8px; }
+    .foe-info { left: 8px; top: 8px; }
+    .player-info { right: 8px; bottom: 8px; }
+    .info-top { font-size: 8px; gap: 6px; }
+    .info-ability { font-size: 15px; }
+    .hp-num { font-size: 16px; }
+    .field:not(:empty) { top: 64px; right: 8px; }
+    .log { min-height: 96px; font-size: 20px; padding: 10px 12px; }
+    .moves :global(button), .party :global(button) { font-size: 9px; padding: 8px; }
+    .party :global(img) { width: 32px; height: 32px; }
+    .cmd-row .btn { flex: 1; }
   }
 </style>
 

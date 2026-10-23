@@ -150,6 +150,7 @@ const GENS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
 
   .dex-types {
     grid-column: 1 / -1;
+    min-width: 0; /* fieldsets otherwise refuse to shrink below their content */
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
@@ -235,10 +236,24 @@ const GENS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
   .dex-grid :global(.dex-tys) { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
   .dex-grid :global(.type) { font-size: 6px; padding: 3px 4px; }
 
+  /* Phones: go full screen and squeeze the controls so the grid gets the room. */
   @media (max-width: 640px) {
-    .dex-filters { grid-template-columns: 1fr; }
-    .dex-slots :global(li) { width: 40px; height: 40px; }
-    .dex-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+    .dex { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
+    .dex-frame { max-height: calc(100dvh - 18px); }
+    .dex-head { padding: 6px 10px; }
+    .dex-party { gap: 8px; padding: 8px 10px; flex-wrap: nowrap; }
+    .dex-label { display: none; }
+    .dex-slots { gap: 4px; }
+    .dex-slots :global(li) { width: 36px; height: 36px; flex-shrink: 0; }
+    .dex-party .btn { padding: 10px; font-size: 9px; }
+    .dex-filters { grid-template-columns: 1fr 104px; gap: 8px; padding: 8px 10px; }
+    .dex-filters label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .dex-filters input, .dex-filters select { font-size: 18px; padding: 6px 8px; }
+    .dex-types { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+    .dex-types legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .type-chip, .type-chip.all { flex-shrink: 0; padding: 8px 10px; }
+    .dex-status { padding: 6px 10px 0; }
+    .dex-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; padding: 8px 10px 12px; }
     .dex-grid :global(img) { width: 64px; height: 64px; }
   }
 </style>
