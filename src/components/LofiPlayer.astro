@@ -1,0 +1,169 @@
+<aside class="player" aria-label="Lofi radio">
+  <div class="wrap player-inner">
+    <div class="tape" aria-hidden="true"><i></i><i></i></div>
+    <div class="now">
+      <span class="now-label">Lofi radio</span>
+      <span class="now-title">Press play</span>
+    </div>
+    <div class="controls">
+      <button class="ctl" type="button" data-lofi="prev" aria-label="Previous track">&#9198;</button>
+      <button class="ctl play" type="button" data-lofi="toggle" aria-label="Play">&#9654;</button>
+      <button class="ctl" type="button" data-lofi="next" aria-label="Next track">&#9197;</button>
+    </div>
+    <label class="vol">
+      <span class="sr-only">Volume</span>
+      <input type="range" min="0" max="1" step="0.01" value="0.6" data-lofi="volume" />
+    </label>
+    <canvas class="viz" width="120" height="36" aria-hidden="true"></canvas>
+  </div>
+</aside>
+
+<style>
+  .player {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    background: rgba(0, 0, 0, 0.92);
+    border-top: 3px solid var(--magenta);
+    box-shadow: 0 -6px 24px rgba(255, 47, 214, 0.25);
+  }
+
+  .player-inner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 72px;
+  }
+
+  .tape {
+    display: flex;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 2px solid var(--muted);
+    background: #111;
+  }
+
+  .tape i {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px dashed var(--yellow);
+  }
+
+  .player.playing .tape i { animation: spin 2s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .now { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .now-label { font-family: var(--pixel); font-size: 8px; color: var(--magenta); text-transform: uppercase; }
+  .now-title { font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .controls { display: flex; gap: 6px; }
+
+  .ctl {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    color: var(--text);
+    background: #111;
+    border: 2px solid var(--border);
+    cursor: pointer;
+  }
+
+  .ctl:hover { border-color: var(--yellow); color: var(--yellow); }
+  .ctl.play { color: #000; background: var(--magenta); border-color: #000; }
+
+  .vol input { width: 110px; padding: 0; border: 0; background: transparent; accent-color: var(--magenta); }
+  .viz { image-rendering: pixelated; }
+
+  @media (max-width: 640px) {
+    .tape, .vol, .viz { display: none; }
+  }
+</style>
+
+<script>
+  import { LofiEngine, TRACKS } from "../scripts/lofi";
+
+  const root = document.querySelector<HTMLElement>(".player")!;
+  const title = root.querySelector<HTMLElement>(".now-title")!;
+  const playBtn = root.querySelector<HTMLButtonElement>("[data-lofi=toggle]")!;
+  const volume = root.querySelector<HTMLInputElement>("[data-lofi=volume]")!;
+  const canvas = root.querySelector<HTMLCanvasElement>(".viz")!;
+  const g = canvas.getContext("2d")!;
+
+  try {
+    const saved = localStorage.getItem("lofi-volume");
+    if (saved !== null) volume.value = saved;
+  } catch {}
+
+  let engine: LofiEngine | null = null;
+  let index = 0;
+  let playing = false;
+  let raf = 0;
+
+  function setPlaying(on: boolean) {
+    playing = on;
+    root.classList.toggle("playing", on);
+    playBtn.innerHTML = on ? "&#10074;&#10074;" : "&#9654;";
+    playBtn.setAttribute("aria-label", on ? "Pause" : "Play");
+    cancelAnimationFrame(raf);
+    if (on) draw();
+  }
+
+  function startTrack(i: number) {
+    index = (i + TRACKS.length) % TRACKS.length;
+    engine ??= new LofiEngine(Number(volume.value));
+    engine.play(TRACKS[index]);
+    title.textContent = `${String(index + 1).padStart(2, "0")}. ${TRACKS[index].title}`;
+  }
+
+  async function toggle() {
+    if (!engine) {
+      startTrack(index);
+      await engine!.resume();
+      return setPlaying(true);
+    }
+    if (playing) {
+      await engine.pause();
+      setPlaying(false);
+    } else {
+      await engine.resume();
+      setPlaying(true);
+    }
+  }
+
+  async function skip(dir: number) {
+    startTrack(index + dir);
+    await engine!.resume();
+    setPlaying(true);
+  }
+
+  function draw() {
+    if (!engine) return;
+    const bins = new Uint8Array(engine.analyser.frequencyBinCount);
+    engine.analyser.getByteFrequencyData(bins);
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    const bars = 12;
+    const w = canvas.width / bars;
+    for (let i = 0; i < bars; i++) {
+      const v = bins[i + 1] / 255;
+      const blocks = Math.round(v * 6);
+      for (let b = 0; b < blocks; b++) {
+        g.fillStyle = b > 4 ? "#ff2fd6" : b > 2 ? "#ffe94d" : "#00f0ff";
+        g.fillRect(i * w + 1, canvas.height - (b + 1) * 6, w - 2, 4);
+      }
+    }
+    raf = requestAnimationFrame(draw);
+  }
+
+  playBtn.addEventListener("click", toggle);
+  root.querySelector("[data-lofi=prev]")!.addEventListener("click", () => skip(-1));
+  root.querySelector("[data-lofi=next]")!.addEventListener("click", () => skip(1));
+  volume.addEventListener("input", () => {
+    engine?.setVolume(Number(volume.value));
+    try {
+      localStorage.setItem("lofi-volume", volume.value);
+    } catch {}
+  });
+</script>

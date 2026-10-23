@@ -1,12 +1,20 @@
 ---
 import "../styles/global.css";
+import LofiPlayer from "../components/LofiPlayer.astro";
+import { site } from "../data/site";
 
 interface Props {
   title: string;
   description?: string;
 }
 
-const { title, description = "Personal website of Colton Weeding." } = Astro.props;
+const { title, description = `${site.name}: ${site.tagline}` } = Astro.props;
+
+const nav = [
+  { href: "#projects", label: "Projects" },
+  { href: "#battle", label: "Battle" },
+  { href: "#contact", label: "Contact" },
+];
 ---
 
 <!doctype html>
@@ -17,23 +25,103 @@ const { title, description = "Personal website of Colton Weeding." } = Astro.pro
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <header class="site-header">
-      <a class="logo" href="/">Colton</a>
-      <nav>
-        <a href="#about">About</a>
-        <a href="#projects">Projects</a>
-        <a href="#contact">Contact</a>
-      </nav>
+    <header class="hud">
+      <div class="wrap hud-inner">
+        <a class="hud-logo" href="/">
+          <span class="glow-magenta">{site.handle}</span><span class="glow-cyan">.EXE</span>
+        </a>
+        <nav aria-label="Main">
+          {nav.map((item) => <a href={item.href}>{item.label}</a>)}
+        </nav>
+        <div class="hud-score" aria-hidden="true">
+          <span>1UP</span>
+          <span class="glow-yellow" id="hud-score">000000</span>
+        </div>
+      </div>
     </header>
 
-    <main>
+    <main class="wrap">
       <slot />
     </main>
 
-    <footer class="site-footer">
-      <p>&copy; {new Date().getFullYear()} Colton Weeding</p>
+    <footer class="wrap site-footer">
+      <p>&copy; {new Date().getFullYear()} {site.name} · Built with Astro · <span class="blink">Insert coin to continue</span></p>
     </footer>
+
+    <LofiPlayer />
   </body>
 </html>
+
+<style>
+  .hud {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.85);
+    border-bottom: 3px solid var(--border);
+    backdrop-filter: blur(4px);
+  }
+
+  .hud-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .hud-logo {
+    font-family: var(--pixel);
+    font-size: 14px;
+    text-decoration: none;
+  }
+
+  nav {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  nav a {
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: var(--text);
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  nav a::before { content: "\25B6 "; color: transparent; }
+  nav a:hover { color: var(--yellow); }
+  nav a:hover::before { color: var(--yellow); }
+
+  .hud-score {
+    display: flex;
+    gap: 10px;
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: var(--red);
+  }
+
+  .site-footer {
+    margin-top: 48px;
+    color: var(--muted);
+    font-size: 18px;
+    text-align: center;
+  }
+
+  @media (max-width: 640px) {
+    .hud-score { display: none; }
+  }
+</style>

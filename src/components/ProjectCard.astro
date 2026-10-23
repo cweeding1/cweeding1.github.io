@@ -1,13 +1,98 @@
 ---
 import type { Project } from "../data/projects";
 
-type Props = Project;
+interface Props {
+  project: Project;
+  number: number;
+}
 
-const { title, url, description, tags } = Astro.props;
+const { project, number } = Astro.props;
+const { title, kind, url, description, tags, color } = project;
 ---
 
-<li>
-  <h3>{url ? <a href={url}>{title}</a> : title}</h3>
+<article class={`cart cart-${color}`}>
+  <div class="cart-label">
+    <span class="cart-slot">SLOT {String(number).padStart(2, "0")}</span>
+    <span class="cart-kind">{kind}</span>
+  </div>
+  <h3>{title}</h3>
   <p>{description}</p>
-  <p class="tags">{tags.join(" · ")}</p>
-</li>
+  <ul class="cart-tags" aria-label="Built with">
+    {tags.map((tag) => <li>{tag}</li>)}
+  </ul>
+  {
+    url ? (
+      <a class="btn cart-start" href={url} target="_blank" rel="noopener">
+        Press start &#9654;
+      </a>
+    ) : (
+      <span class="cart-soon">Live demo coming soon</span>
+    )
+  }
+</article>
+
+<style>
+  .cart {
+    --c: var(--cyan);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 18px 20px;
+    background: #000;
+    border: 3px solid var(--c);
+    box-shadow: 0 0 0 3px #000, 0 0 18px color-mix(in srgb, var(--c) 35%, transparent);
+    clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+    transition: transform 0.15s steps(3);
+  }
+  .cart:hover { transform: translateY(-4px); }
+
+  .cart-magenta { --c: var(--magenta); }
+  .cart-yellow { --c: var(--yellow); }
+  .cart-green { --c: var(--green); }
+
+  .cart-label {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 -18px;
+    padding: 8px 32px 8px 18px;
+    background: var(--c);
+    color: #000;
+    font-family: var(--pixel);
+    font-size: 9px;
+  }
+
+  h3 {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--c);
+    text-shadow: 0 0 8px var(--c);
+  }
+
+  p { margin: 0; color: var(--text); }
+
+  .cart-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cart-tags li {
+    font-size: 17px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .cart-start { align-self: flex-start; margin-top: auto; background: var(--c); }
+
+  .cart-soon {
+    margin-top: auto;
+    font-family: var(--pixel);
+    font-size: 9px;
+    color: var(--muted);
+  }
+</style>

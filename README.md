@@ -1,7 +1,7 @@
 # Personal Website
 
 Personal website built with [Astro](https://astro.build) and hosted on GitHub Pages
-at https://cweeding1.github.io.
+at https://coltonweeding.com.
 
 ## Structure
 

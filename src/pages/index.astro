@@ -1,29 +1,121 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import Panel from "../components/Panel.astro";
 import ProjectCard from "../components/ProjectCard.astro";
+import PokemonBattle from "../components/PokemonBattle.astro";
+import ContactForm from "../components/ContactForm.astro";
 import { projects } from "../data/projects";
+import { site } from "../data/site";
+
+const stats = [
+  { label: "Class", value: "Developer" },
+  { label: "Projects", value: String(projects.length).padStart(2, "0") },
+  { label: "Status", value: "Online" },
+];
 ---
 
-<Layout title="Colton Weeding">
-  <section class="hero">
-    <h1>Hi, I'm Colton.</h1>
-    <p>A short one-line intro about who you are and what you do.</p>
+<Layout title={site.name}>
+  <section class="hero panel" aria-labelledby="hero-title">
+    <div class="avatar" aria-hidden="true">
+      <span>{site.handle.slice(0, 1)}</span>
+    </div>
+    <div class="hero-body">
+      <p class="hero-kicker">Player 1</p>
+      <h1 id="hero-title" class="glow-magenta">{site.name}</h1>
+      <p class="hero-tagline">{site.tagline}</p>
+      <dl class="stats">
+        {
+          stats.map((s) => (
+            <div>
+              <dt>{s.label}</dt>
+              <dd class="glow-yellow">{s.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+      <a class="btn yellow" href="#projects">Press start <span class="blink">&#9654;</span></a>
+    </div>
   </section>
 
-  <section id="about">
-    <h2>About</h2>
-    <p>Write a few sentences about yourself here.</p>
-  </section>
+  <div class="board">
+    <Panel id="projects" title="Game Library" hint="Select a cartridge">
+      <div class="carts">
+        {projects.map((project, i) => <ProjectCard project={project} number={i + 1} />)}
+      </div>
+    </Panel>
 
-  <section id="projects">
-    <h2>Projects</h2>
-    <ul class="projects">
-      {projects.map((project) => <ProjectCard {...project} />)}
-    </ul>
-  </section>
+    <Panel id="battle" title="Battle Arena" hint="Powered by PokéAPI">
+      <PokemonBattle />
+    </Panel>
 
-  <section id="contact">
-    <h2>Contact</h2>
-    <p>Reach me at <a href="mailto:you@example.com">you@example.com</a>.</p>
-  </section>
+    <Panel id="contact" title="Send a Message" hint="Player 2 has entered">
+      <ContactForm />
+    </Panel>
+  </div>
 </Layout>
+
+<style>
+  .hero {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 28px;
+    align-items: center;
+    margin-top: 32px;
+  }
+
+  .avatar {
+    width: 160px;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    background:
+      repeating-linear-gradient(0deg, rgba(0, 240, 255, 0.08) 0 4px, transparent 4px 8px),
+      #000;
+    border: 4px solid var(--cyan);
+    box-shadow: 0 0 0 4px #000, 0 0 24px rgba(0, 240, 255, 0.5);
+    font-family: var(--pixel);
+    font-size: 72px;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan);
+  }
+
+  .hero-kicker {
+    margin: 0;
+    font-family: var(--pixel);
+    font-size: 11px;
+    color: var(--green);
+  }
+
+  h1 { margin: 10px 0; font-size: clamp(20px, 4vw, 36px); }
+
+  .hero-tagline { margin: 0 0 18px; font-size: 26px; color: var(--text); }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 32px;
+    margin: 0 0 22px;
+  }
+
+  .stats dt { font-family: var(--pixel); font-size: 9px; color: var(--muted); text-transform: uppercase; }
+  .stats dd { margin: 4px 0 0; font-family: var(--pixel); font-size: 13px; text-transform: uppercase; }
+
+  .board {
+    display: grid;
+    gap: 32px;
+    margin-top: 32px;
+  }
+
+  .board :global(.panel) { scroll-margin-top: 96px; }
+
+  .carts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    gap: 24px;
+  }
+
+  @media (max-width: 640px) {
+    .hero { grid-template-columns: 1fr; justify-items: start; }
+    .avatar { width: 96px; font-size: 44px; }
+  }
+</style>

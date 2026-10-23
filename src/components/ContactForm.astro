@@ -1,0 +1,83 @@
+---
+import { site } from "../data/site";
+
+const endpoint = site.formspreeId ? `https://formspree.io/f/${site.formspreeId}` : "";
+---
+
+<form class="contact" data-endpoint={endpoint} method="POST" action={endpoint || undefined}>
+  {
+    !endpoint && (
+      <p class="offline" role="status">
+        <span class="blink">&#9888;</span> Message relay offline. Check back soon.
+      </p>
+    )
+  }
+  <div class="row">
+    <div>
+      <label for="contact-name">Player name</label>
+      <input id="contact-name" name="name" autocomplete="name" required maxlength="100" />
+    </div>
+    <div>
+      <label for="contact-email">Your email</label>
+      <input id="contact-email" name="email" type="email" autocomplete="email" required maxlength="200" />
+    </div>
+  </div>
+  <div>
+    <label for="contact-message">Message</label>
+    <textarea id="contact-message" name="message" rows="5" required maxlength="5000"></textarea>
+  </div>
+  <!-- Honeypot field Formspree uses to drop spam -->
+  <input type="text" name="_gotcha" class="sr-only" tabindex="-1" autocomplete="off" aria-hidden="true" />
+  <div class="actions">
+    <button class="btn magenta" type="submit" disabled={!endpoint}>Send &#9654;</button>
+    <p class="status" role="status" aria-live="polite"></p>
+  </div>
+</form>
+
+<style>
+  .contact { display: grid; gap: 18px; max-width: 760px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  textarea { resize: vertical; }
+  .actions { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .status { margin: 0; font-family: var(--pixel); font-size: 10px; }
+  .status.ok { color: var(--green); }
+  .status.err { color: var(--red); }
+  .offline { margin: 0; font-family: var(--pixel); font-size: 10px; color: var(--yellow); }
+
+  @media (max-width: 640px) {
+    .row { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>("form.contact");
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const endpoint = form.dataset.endpoint;
+    if (!endpoint) return;
+
+    const status = form.querySelector<HTMLElement>(".status")!;
+    const button = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
+    button.disabled = true;
+    status.className = "status";
+    status.textContent = "Sending...";
+
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        body: new FormData(form),
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      form.reset();
+      status.className = "status ok";
+      status.textContent = "Message received! +1000 pts";
+    } catch {
+      status.className = "status err";
+      status.textContent = "Transmission failed. Try again.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>

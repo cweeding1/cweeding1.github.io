@@ -1,0 +1,591 @@
+---
+import { site } from "../data/site";
+---
+
+<div class="arena" data-foe-team={JSON.stringify(site.pokemonTeam)} data-foe-name={site.handle}>
+  <!-- Team select -->
+  <div class="screen builder" data-screen="builder">
+    <div class="builder-grid">
+      <div>
+        <p class="lead">Build a team of 6 and challenge my team. Every Pokémon fights at level 50.</p>
+        <form class="search" autocomplete="off">
+          <label for="poke-search">Add a Pokémon</label>
+          <div class="search-row">
+            <input id="poke-search" list="poke-names" placeholder="pikachu" />
+            <datalist id="poke-names"></datalist>
+            <button class="btn" type="submit">Add</button>
+          </div>
+        </form>
+        <div class="builder-actions">
+          <button class="btn yellow" type="button" data-action="random">Random team</button>
+          <button class="btn ghost" type="button" data-action="clear">Clear</button>
+        </div>
+        <p class="msg" role="status" aria-live="polite"></p>
+      </div>
+
+      <div>
+        <p class="label">Your team <span class="count">0/6</span></p>
+        <ol class="slots player-slots"></ol>
+        <p class="label">Rival: <span class="glow-magenta">{site.handle}</span></p>
+        <ol class="slots foe-slots"></ol>
+      </div>
+    </div>
+    <button class="btn magenta start" type="button" data-action="start" disabled>Battle! &#9654;</button>
+  </div>
+
+  <!-- Battle -->
+  <div class="screen battle" data-screen="battle" hidden>
+    <div class="stage">
+      <div class="info foe-info">
+        <div class="info-top"><span class="info-name"></span><span class="info-lv">Lv50</span></div>
+        <div class="hpbar"><span></span></div>
+        <div class="balls"></div>
+      </div>
+      <img class="sprite foe-sprite" alt="" width="192" height="192" />
+      <img class="sprite player-sprite" alt="" width="192" height="192" />
+      <div class="info player-info">
+        <div class="info-top"><span class="info-name"></span><span class="info-lv">Lv50</span></div>
+        <div class="hpbar"><span></span></div>
+        <div class="hp-num"></div>
+        <div class="balls"></div>
+      </div>
+    </div>
+    <div class="console">
+      <p class="log" aria-live="polite"></p>
+      <div class="commands">
+        <div class="moves"></div>
+        <div class="party" hidden></div>
+        <div class="cmd-row">
+          <button class="btn ghost" type="button" data-action="toggle-party">Switch</button>
+          <button class="btn ghost" type="button" data-action="forfeit">Run</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="screen result" data-screen="result" hidden>
+    <p class="result-title"></p>
+    <p class="result-sub"></p>
+    <div class="builder-actions">
+      <button class="btn yellow" type="button" data-action="rematch">Rematch</button>
+      <button class="btn ghost" type="button" data-action="new-team">New team</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .lead { margin: 0 0 18px; }
+  .label { font-family: var(--pixel); font-size: 10px; color: var(--muted); margin: 0 0 10px; }
+  .msg { min-height: 1.3em; color: var(--yellow); margin: 12px 0 0; }
+
+  .builder-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 32px;
+  }
+
+  .search-row { display: flex; gap: 10px; }
+  .search-row input { flex: 1; min-width: 0; }
+
+  .builder-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+
+  .slots {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .slots :global(li) {
+    position: relative;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    background: #000;
+    border: 2px dashed var(--border);
+    min-width: 0;
+  }
+
+  .slots :global(li.filled) { border-style: solid; border-color: var(--cyan); }
+  .foe-slots :global(li.filled) { border-color: var(--magenta); }
+
+  .slots :global(img) { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+
+  .slots :global(.remove) {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: #000;
+    background: var(--red);
+    border: 2px solid #000;
+    cursor: pointer;
+  }
+
+  .slots :global(.slot-name) {
+    position: absolute;
+    bottom: 2px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 2px;
+  }
+
+  .start { margin-top: 8px; font-size: 13px; padding: 14px 22px; }
+
+  /* Battle stage */
+  .stage {
+    position: relative;
+    height: 340px;
+    background:
+      radial-gradient(ellipse 120px 26px at 72% 42%, rgba(57, 255, 20, 0.35), transparent 70%),
+      radial-gradient(ellipse 150px 30px at 25% 88%, rgba(0, 240, 255, 0.35), transparent 70%),
+      linear-gradient(180deg, #1b1050 0%, #0a0a2a 55%, #062012 56%, #031208 100%);
+    border: 3px solid var(--border);
+    overflow: hidden;
+  }
+
+  .sprite {
+    position: absolute;
+    width: 192px;
+    height: 192px;
+    image-rendering: pixelated;
+    transition: transform 0.2s steps(4), opacity 0.4s;
+  }
+
+  .foe-sprite { right: 12%; top: 12px; }
+  .player-sprite { left: 10%; bottom: -6px; }
+  .sprite.no-back { transform: scaleX(-1); }
+
+  .sprite.hit { animation: flash 0.5s steps(2) 2; }
+  .sprite.fainted { opacity: 0; transform: translateY(40px); }
+  .foe-sprite.lunge { transform: translate(-24px, 12px); }
+  .player-sprite.lunge { transform: translate(24px, -12px); }
+  .player-sprite.no-back.lunge { transform: scaleX(-1) translate(-24px, -12px); }
+  @keyframes flash { 50% { opacity: 0.1; } }
+
+  .info {
+    position: absolute;
+    width: min(300px, 46%);
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 3px solid var(--text);
+    box-shadow: 4px 4px 0 #000;
+  }
+
+  .foe-info { left: 16px; top: 16px; }
+  .player-info { right: 16px; bottom: 16px; }
+
+  .info-top { display: flex; justify-content: space-between; gap: 8px; font-family: var(--pixel); font-size: 10px; }
+  .info-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .info-lv { color: var(--muted); }
+
+  .hpbar {
+    margin-top: 8px;
+    height: 10px;
+    background: #222;
+    border: 2px solid #555;
+  }
+
+  .hpbar span {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--green);
+    transition: width 0.6s steps(12), background-color 0.3s;
+  }
+
+  .hpbar span.mid { background: var(--yellow); }
+  .hpbar span.low { background: var(--red); }
+
+  .hp-num { text-align: right; font-size: 18px; margin-top: 2px; }
+
+  .balls { display: flex; gap: 4px; margin-top: 6px; }
+  .balls :global(i) {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, var(--red) 50%, #fff 50%);
+    border: 1px solid #000;
+  }
+  .balls :global(i.out) { background: #444; }
+
+  .console {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .log {
+    margin: 0;
+    min-height: 120px;
+    padding: 14px 16px;
+    background: #000;
+    border: 3px solid var(--text);
+    font-size: 24px;
+  }
+
+  .moves, .party {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .moves :global(button), .party :global(button) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 12px;
+    font-family: var(--pixel);
+    font-size: 10px;
+    text-align: left;
+    color: #fff;
+    background: #000;
+    border: 3px solid var(--border);
+    cursor: pointer;
+  }
+
+  .moves :global(button:hover:not(:disabled)), .party :global(button:hover:not(:disabled)) { border-color: var(--yellow); }
+  .moves :global(button:disabled), .party :global(button:disabled) { opacity: 0.4; cursor: not-allowed; }
+  .moves :global(.eff) { font-family: var(--mono); font-size: 16px; color: var(--muted); }
+  .party :global(button) { flex-direction: row; align-items: center; }
+  .party :global(img) { width: 40px; height: 40px; image-rendering: pixelated; }
+
+  .cmd-row { display: flex; gap: 10px; margin-top: 10px; }
+
+  .result { text-align: center; padding: 32px 0; }
+  .result-title { font-family: var(--pixel); font-size: clamp(20px, 5vw, 40px); margin: 0 0 16px; }
+  .result-sub { margin: 0 0 24px; }
+  .result .builder-actions { justify-content: center; }
+
+  @media (max-width: 800px) {
+    .builder-grid, .console { grid-template-columns: 1fr; }
+    .slots { grid-template-columns: repeat(3, 1fr); }
+    .stage { height: 280px; }
+    .sprite { width: 128px; height: 128px; }
+    .foe-sprite { top: 52px; right: 4%; }
+  }
+</style>
+
+<script>
+  import { Battle, damageFor, type BattleEvent, type Side } from "../scripts/pokemon/battle";
+  import { displayName, fetchAllNames, fetchPokemon, MAX_DEX, toBattler, type Battler } from "../scripts/pokemon/api";
+
+  const root = document.querySelector<HTMLElement>(".arena")!;
+  const $ = <T extends Element = HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
+
+  const foeNames: string[] = JSON.parse(root.dataset.foeTeam ?? "[]");
+  const foeHandle = root.dataset.foeName ?? "Rival";
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, reduceMotion ? Math.min(ms, 250) : ms));
+
+  let team: Battler[] = [];
+  let foeTeam: Battler[] = [];
+  let battle: Battle | null = null;
+  let busy = false;
+
+  function show(screen: string) {
+    root.querySelectorAll<HTMLElement>("[data-screen]").forEach((el) => {
+      el.hidden = el.dataset.screen !== screen;
+    });
+  }
+
+  function setMsg(text: string) {
+    $(".msg").textContent = text;
+  }
+
+  function addScore(points: number) {
+    const el = document.getElementById("hud-score");
+    if (!el) return;
+    const next = Math.min(999999, Number(el.textContent) + points);
+    el.textContent = String(next).padStart(6, "0");
+  }
+
+  /* ---------- Team builder ---------- */
+
+  function renderSlots(list: HTMLElement, mons: Battler[], removable: boolean) {
+    list.replaceChildren(
+      ...Array.from({ length: 6 }, (_, i) => {
+        const li = document.createElement("li");
+        const mon = mons[i];
+        if (!mon) return li;
+        li.className = "filled";
+        li.title = `${displayName(mon.name)} (${mon.types.join("/")})`;
+        const img = document.createElement("img");
+        img.src = mon.front;
+        img.alt = displayName(mon.name);
+        img.loading = "lazy";
+        const name = document.createElement("span");
+        name.className = "slot-name";
+        name.textContent = displayName(mon.name);
+        li.append(img, name);
+        if (removable) {
+          const btn = document.createElement("button");
+          btn.className = "remove";
+          btn.type = "button";
+          btn.textContent = "x";
+          btn.setAttribute("aria-label", `Remove ${displayName(mon.name)}`);
+          btn.addEventListener("click", () => {
+            team.splice(i, 1);
+            renderTeam();
+          });
+          li.append(btn);
+        }
+        return li;
+      }),
+    );
+  }
+
+  function renderTeam() {
+    renderSlots($(".player-slots"), team, true);
+    $(".count").textContent = `${team.length}/6`;
+    $<HTMLButtonElement>("[data-action=start]").disabled = team.length !== 6 || foeTeam.length !== 6;
+  }
+
+  async function addPokemon(query: string) {
+    const q = query.trim().toLowerCase();
+    if (!q) return;
+    if (team.length >= 6) return setMsg("Your team is full!");
+    setMsg("Loading...");
+    try {
+      team.push(toBattler(await fetchPokemon(q)));
+      setMsg("");
+      renderTeam();
+    } catch {
+      setMsg(`Couldn't find "${query}".`);
+    }
+  }
+
+  async function randomTeam() {
+    setMsg("Rolling...");
+    const ids = new Set<number>();
+    while (ids.size < 6) ids.add(1 + Math.floor(Math.random() * MAX_DEX));
+    try {
+      team = (await Promise.all([...ids].map((id) => fetchPokemon(id)))).map(toBattler);
+      setMsg("");
+    } catch {
+      setMsg("PokéAPI isn't responding. Try again.");
+    }
+    renderTeam();
+  }
+
+  async function loadFoes() {
+    try {
+      foeTeam = (await Promise.all(foeNames.map((n) => fetchPokemon(n)))).map(toBattler);
+      renderSlots($(".foe-slots"), foeTeam, false);
+      renderTeam();
+    } catch {
+      setMsg("Couldn't reach PokéAPI. Refresh to try again.");
+    }
+  }
+
+  $("form.search").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = $<HTMLInputElement>("#poke-search");
+    addPokemon(input.value).then(() => (input.value = ""));
+  });
+
+  fetchAllNames()
+    .then((names) => {
+      $("#poke-names").replaceChildren(
+        ...names.map((n) => Object.assign(document.createElement("option"), { value: n })),
+      );
+    })
+    .catch(() => {});
+
+  /* ---------- Battle ---------- */
+
+  function hpClass(mon: Battler) {
+    const pct = mon.hp / mon.maxHp;
+    return pct > 0.5 ? "" : pct > 0.2 ? "mid" : "low";
+  }
+
+  function setHp(side: Side, mon: Battler) {
+    const bar = $(`.${side}-info .hpbar span`);
+    bar.style.width = `${(mon.hp / mon.maxHp) * 100}%`;
+    bar.className = hpClass(mon);
+    if (side === "player") $(".hp-num").textContent = `${mon.hp}/${mon.maxHp}`;
+  }
+
+  function renderBalls(side: Side, mons: Battler[]) {
+    $(`.${side}-info .balls`).replaceChildren(
+      ...mons.map((m) => {
+        const i = document.createElement("i");
+        if (m.hp === 0) i.className = "out";
+        return i;
+      }),
+    );
+  }
+
+  function renderSide(side: Side) {
+    if (!battle) return;
+    const mon = side === "player" ? battle.playerMon : battle.foeMon;
+    const sprite = $<HTMLImageElement>(`.${side}-sprite`);
+    const useBack = side === "player" && mon.back;
+    sprite.src = side === "player" ? mon.back || mon.front : mon.front;
+    sprite.alt = displayName(mon.name);
+    sprite.className = `sprite ${side}-sprite${side === "player" && !useBack ? " no-back" : ""}`;
+    $(`.${side}-info .info-name`).textContent = displayName(mon.name);
+    setHp(side, mon);
+    renderBalls(side, side === "player" ? battle.player : battle.foe);
+  }
+
+  function effLabel(mult: number) {
+    if (mult === 0) return "No effect";
+    if (mult > 1) return "Super effective";
+    if (mult < 1) return "Not very effective";
+    return "Effective";
+  }
+
+  function renderCommands() {
+    if (!battle) return;
+    const b = battle;
+    const fainted = b.playerMon.hp === 0;
+    const moves = $(".moves");
+    const party = $(".party");
+
+    moves.replaceChildren(
+      ...b.playerMon.moves.map((m, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.disabled = busy || fainted;
+        const eff = damageFor(b.playerMon, b.foeMon, m, false).eff;
+        btn.innerHTML = `<span>${m.name}</span><span class="type type-${m.type}">${m.type}</span><span class="eff">${effLabel(eff)}</span>`;
+        btn.addEventListener("click", () => play(b.turn({ kind: "move", index: i })));
+        return btn;
+      }),
+    );
+
+    party.replaceChildren(
+      ...b.player.map((m, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.disabled = busy || m.hp === 0 || i === b.playerActive;
+        btn.innerHTML = `<img src="${m.front}" alt=""><span>${displayName(m.name)}<br>${m.hp}/${m.maxHp}</span>`;
+        btn.addEventListener("click", () => {
+          party.hidden = true;
+          moves.hidden = false;
+          play(fainted ? b.replace(i) : b.turn({ kind: "switch", to: i }));
+        });
+        return btn;
+      }),
+    );
+
+    // A fainted Pokémon must be replaced before anything else.
+    party.hidden = !fainted && party.hidden;
+    if (fainted) {
+      party.hidden = false;
+      moves.hidden = true;
+    }
+    $<HTMLButtonElement>("[data-action=toggle-party]").disabled = busy || fainted;
+    $<HTMLButtonElement>("[data-action=forfeit]").disabled = busy;
+  }
+
+  async function play(events: BattleEvent[]) {
+    if (!battle) return;
+    busy = true;
+    renderCommands();
+    const log = $(".log");
+
+    for (const ev of events) {
+      if (ev.type === "text") {
+        log.textContent = ev.text;
+        await sleep(900);
+      } else if (ev.type === "attack") {
+        const s = $(`.${ev.side}-sprite`);
+        s.classList.add("lunge");
+        await sleep(200);
+        s.classList.remove("lunge");
+      } else if (ev.type === "damage") {
+        const mon = ev.side === "player" ? battle.playerMon : battle.foeMon;
+        $(`.${ev.side}-sprite`).classList.add("hit");
+        setHp(ev.side, mon);
+        if (ev.side === "foe") addScore(ev.damage * 10);
+        await sleep(700);
+        $(`.${ev.side}-sprite`).classList.remove("hit");
+      } else if (ev.type === "faint") {
+        $(`.${ev.side}-sprite`).classList.add("fainted");
+        renderBalls(ev.side, ev.side === "player" ? battle.player : battle.foe);
+        if (ev.side === "foe") addScore(1000);
+        await sleep(600);
+      } else if (ev.type === "switch") {
+        renderSide(ev.side);
+        await sleep(300);
+      }
+    }
+
+    busy = false;
+    const winner = battle.winner;
+    if (winner) return finish(winner);
+    log.textContent =
+      battle.playerMon.hp === 0
+        ? "Choose your next Pokémon!"
+        : `What will ${displayName(battle.playerMon.name)} do?`;
+    renderCommands();
+  }
+
+  function finish(winner: Side) {
+    const title = $(".result-title");
+    if (winner === "player") {
+      title.textContent = "You win!";
+      title.className = "result-title glow-yellow";
+      $(".result-sub").textContent = `You beat ${foeHandle}'s team. +5000 pts`;
+      addScore(5000);
+    } else {
+      title.textContent = "Game over";
+      title.className = "result-title glow-magenta";
+      $(".result-sub").textContent = `${foeHandle}'s team wins this round. Continue?`;
+    }
+    show("result");
+  }
+
+  function startBattle() {
+    const heal = (m: Battler) => ({ ...m, hp: m.maxHp });
+    battle = new Battle(team.map(heal), foeTeam.map(heal));
+    show("battle");
+    $(".party").hidden = true;
+    $(".moves").hidden = false;
+    renderSide("player");
+    renderSide("foe");
+    $(".log").textContent = `${foeHandle} wants to battle!`;
+    play([
+      { type: "text", text: `${foeHandle} sent out ${displayName(battle.foeMon.name)}!` },
+      { type: "text", text: `Go! ${displayName(battle.playerMon.name)}!` },
+    ]);
+    root.scrollIntoView({ block: "start" });
+  }
+
+  root.addEventListener("click", (e) => {
+    const action = (e.target as HTMLElement).closest<HTMLElement>("[data-action]")?.dataset.action;
+    if (!action) return;
+    if (action === "random") randomTeam();
+    if (action === "clear") {
+      team = [];
+      renderTeam();
+    }
+    if (action === "start" || action === "rematch") startBattle();
+    if (action === "new-team") show("builder");
+    if (action === "forfeit" && !busy) finish("foe");
+    if (action === "toggle-party" && !busy) {
+      const party = $(".party");
+      party.hidden = !party.hidden;
+      $(".moves").hidden = !party.hidden;
+    }
+  });
+
+  renderTeam();
+  loadFoes();
+</script>
