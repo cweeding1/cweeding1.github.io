@@ -6,5 +6,5 @@ export const site = {
   // to show the contact form as offline.
   formspreeId: "",
   // The team visitors battle against in the Battle Arena.
-  pokemonTeam: ["charizard", "gengar", "lucario", "gyarados", "garchomp", "umbreon"],
+  pokemonTeam: ["blaziken", "nidoking", "clodsire", "toxtricity-amped", "golisopod", "ceruledge"],
 };
