@@ -9,6 +9,8 @@ at https://coltonweeding.com.
 - `src/layouts/Layout.astro` — shared page shell (head, header, footer)
 - `src/components/ProjectCard.astro` — one project entry
 - `src/data/projects.ts` — project list; add a project here
+- `src/data/albums.ts` — Jukebox albums; add a Spotify album link here (title, artist,
+  year and cover art are looked up from Spotify at build time)
 - `src/styles/global.css` — site styles
 - `public/` — static files copied as-is (favicon, images, `CNAME`)
 

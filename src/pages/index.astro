@@ -4,8 +4,13 @@ import Panel from "../components/Panel.astro";
 import ProjectCard from "../components/ProjectCard.astro";
 import PokemonBattle from "../components/PokemonBattle.astro";
 import ContactForm from "../components/ContactForm.astro";
+import Jukebox from "../components/Jukebox.astro";
 import { projects } from "../data/projects";
 import { site } from "../data/site";
+import { albums } from "../data/albums";
+import { loadAlbum } from "../data/spotify";
+
+const albumInfo = await Promise.all(albums.map(loadAlbum));
 
 const stats = [
   { label: "Class", value: "Developer" },
@@ -47,6 +52,14 @@ const stats = [
     <Panel id="battle" title="Battle Arena" hint="Powered by PokéAPI">
       <PokemonBattle />
     </Panel>
+
+    {
+      albumInfo.length > 0 && (
+        <Panel id="music" title="Jukebox" hint="Now spinning">
+          <Jukebox albums={albumInfo} />
+        </Panel>
+      )
+    }
 
     <Panel id="contact" title="Send a Message" hint="Player 2 has entered">
       <ContactForm />

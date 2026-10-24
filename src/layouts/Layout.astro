@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import LofiPlayer from "../components/LofiPlayer.astro";
 import { site } from "../data/site";
+import { albums } from "../data/albums";
 
 interface Props {
   title: string;
@@ -13,6 +14,7 @@ const { title, description = `${site.name}: ${site.tagline}` } = Astro.props;
 const nav = [
   { href: "#projects", label: "Projects" },
   { href: "#battle", label: "Battle" },
+  ...(albums.length ? [{ href: "#music", label: "Music" }] : []),
   { href: "#contact", label: "Contact" },
 ];
 ---
