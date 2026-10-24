@@ -12,4 +12,8 @@ export interface Album {
 // The Jukebox panel stays hidden while this list is empty.
 export const albums: Album[] = [
   { spotify: "https://open.spotify.com/album/1XJET4J6WgkMkalolZojgR" },
+  { spotify: "https://open.spotify.com/album/7HYm5WG8IiXJtgWvYPGTfI" },
+  { spotify: "https://open.spotify.com/album/12qyF8VYd8ceuwyHpGGgw2" },
+  { spotify: "https://open.spotify.com/album/1yh863utXtpMuPlIbzM2Uh" },
+  { spotify: "https://open.spotify.com/album/4rgRqlGXlhEzVtSjuRNJzv" },
 ];
