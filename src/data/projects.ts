@@ -25,4 +25,13 @@ export const projects: Project[] = [
     tags: ["React Native", "Expo", "TypeScript", "Go", "AWS Lambda", "DynamoDB", "Cognito", "Stripe Connect", "AWS CDK"],
     color: "magenta",
   },
+  {
+    title: "KnobHub",
+    kind: "Hardware",
+    url: "https://github.com/cweeding1/KnobHub",
+    description:
+      "A desk controller built on an ESP32-S3 inside a round 360x360 touchscreen ringed by a clicky rotary dial. A home carousel opens apps for controlling Spotify, adjusting per-app volumes in the Windows mixer, watching live PC stats like CPU and GPU load and temperatures, and seeing who's talking in Discord voice, with popups for new notifications. A Python companion agent on the PC streams stats and Discord state to the knob over USB serial, and the dial sends volume and mute changes back, with haptic feedback on every click.",
+    tags: ["ESP32-S3", "C++", "Arduino", "Python", "Spotify Web API", "Discord RPC", "USB Serial"],
+    color: "yellow",
+  },
 ];
